@@ -5,7 +5,8 @@ from langchain.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from langchain.memory import ConversationBufferMemory
 
-
+os.environ['OPENAI_API_KEY'] = st.secrets['open_api_key']
+os.environ['PINECONE_API_KEY'] = st.secrets['pinecone_api_key']
 
 # Create a function to display the inputs
 def character_inputs():
