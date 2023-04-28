@@ -2,7 +2,7 @@ from langchain.llms import OpenAI
 import os
 import streamlit as st
 from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
+from langchain.chains import LLMChain, SequentialChain
 from langchain.memory import ConversationBufferMemory
 
 os.environ['OPENAI_API_KEY'] = st.secrets['open_api_key']
@@ -18,7 +18,7 @@ def character_inputs():
     # Create the placeholders
     general_information_placeholder = """You're a male cleric of a goddess named "Joramy", the goddess of zeal, volcanoes, fire, and lightning.  You come from a viking-like community, wear heavy armor, and wield a warhammer. You have a very direct way of speaking, and you never use contractions. For example, "I'm" would always be "I am."""
     appearance_placeholder =  """You are a tall blond viking warrior with a half shaven head witht he shaven half covered in tribal tattoos. You have a long braided beard and a scar across your left eye. You wear heavy armor and wield a maul. Your armor is always lightly smoldering, and your cape always lightly blowing in the wind. You also have a large shield with tribal and holy symbols on it."""
-    personality_placeholder = """You usually find yourself fighting in the front-lines with the warriors, but your specialty is lightning and fire focused spells. Your name is "Obsidian Ash".  Your least favorite type of magic is healing magic, but you begrudgingly do it for your party. However, your healing spells take on a unique style of healing via cauterization. You always give a snarky but deep and meaningful quote when you heal your allies, which almost always contains a reference to Joramy in one of her many names.  Your magic usually takes on the form viking magic, fire, and ash. All spells should be described in a manner consistent with the spell name while including the flavor of vikings, Ash's goddess, fire, lava, and thunder. An important rule of your religion is you never say the name "Joramy", as it is forbidden by religion. You instead must use one of her honorary names such as "The Empress of Cinders" and "The Queen of Ash". Be creative and come up with other names for Joramy, but I repeat, you must never use the word "Joramy" in any of your speech. You speak with few words, but always with purpose and meaning, the only exception is when telling stories, which you always over embellish. You have a slight Nordic accent that is easy to understand, but is definitely noticeable."""
+    personality_placeholder = """You usually find yourself fighting in the front-lines with the warriors, but your specialty is lightning and fire focused spells. Your name is "Obsidian Ash".  Your least favorite type of magic is healing magic, but you begrudgingly do it for your party. However, your healing spells take on a unique style of healing via cauterization. You always give a snarky but deep and meaningful quote when you heal your allies, which almost always contains a reference to Joramy in one of her many names.  Your magic usually takes on the form viking magic, fire, and ash. All spells should be described in a manner consistent with the spell name while including the flavor of vikings, Ash's goddess, fire, lava, and thunder. An important rule of your religion is you never say the name "Joramy", as it is forbidden by religion. You instead must use one of her honorary names such as "The Empress of Cinders" and "The Queen of Ash". Be creative and come up with other names for Joramy, but I repeat, you must never use the word "Joramy" in any of your speech. You speak with few words, but always with purpose and meaning, the only exception is when telling stories, which you always over embellish. You have a slight Swedish accent that is easy to understand."""
    
     # Create the inputs
     character_name = st.text_input("Character Name", "Obsidian Ash")
@@ -66,15 +66,15 @@ def script_generator():
     # Display the outputs
     if character_name:
         st.write(f"{character_name}-GPT Roleplaying Assistant")
-        prompt = st.text_input('Enter a prompt', placeholder="You're surrounded by goblins. How do you break through them?")
+        action_prompt = st.text_input('Enter a prompt', placeholder="You're surrounded by goblins. How do you break through them?")
     else:
         st.write("Please enter a character name.")
 
 
     # Prompt Templates
-    input_prompt_template = PromptTemplate(
-    input_variables = ['prompt','character_name','race','class_type','alignment','general_information','appearance','personality'],
-    template="""You're a creative writer who specializes in fantasy, similar to what would be see in the genre of Dungeons and Dragons. Your job is take the prompt, {prompt}, and write a creative response fitting for a character who meets the following criteria:
+    character_summary_template = PromptTemplate(
+    input_variables = ['character_name','race','class_type','alignment','general_information','appearance','personality'],
+    template="""You are Brandon Sanderson, a famous fantasy novelists. Your job is to take the following traits and inputs given to you by a fan and write them an amazing and embellished 3-4 paragraph character summary. Their writing is bland and amatuer, but you are a professional. As such, your version will reuse as little words as possible while still staying true to the character:
                 Name: {character_name}
                 Race: {race}
                 Class: {class_type}
@@ -82,23 +82,38 @@ def script_generator():
                 General Information: {general_information}
                 Appearance: {appearance}
                 Personality: {personality}
-                
-                Be sure to as many of the characters traits as possible in your creative response, especially those from the appearance and personality sections.
                 """               )
+
+    action_template = PromptTemplate(
+    input_variables = ['action_prompt', 'character_summary'],
+    template="""You are Brandon Sanderson, a famous fantasy novelist. A fan has given you the following paragraphs as character in your book:
+                    {character_summary}
+                    
+                    You must write an epic and heart stopping snippet for your book based on the following prompt, {action_prompt}"""               )
     # Memory
-    prompt_memory = ConversationBufferMemory(input_key='prompt', memory_key='chat_history')
+    prompt_memory = ConversationBufferMemory(input_key='action_prompt', memory_key='chat_history')
 
     # LLMs Setup
     llm = OpenAI(temperature=0.8)
-    prompt_chain = LLMChain(llm=llm, 
-                        prompt=input_prompt_template, 
-                        verbose=True, 
-                        output_key = 'creative_script',
-                        memory=prompt_memory)
-    if prompt:
-        script = prompt_chain.run(prompt=prompt, character_name=character_name, race=race, class_type=class_type, alignment=alignment, general_information=general_information, appearance=appearance, personality=personality)
+    character_summary_chain = LLMChain( llm=llm,
+                                        prompt=character_summary_template,
+                                        verbose=True,
+                                        output_key = 'character_summary',
+                                        memory=prompt_memory)
 
-        st.write(script)
+    action_chain = LLMChain(            llm=llm,
+                                        prompt=action_template,
+                                        verbose=True,
+                                        output_key = 'action',
+                                        memory=prompt_memory)
+
+
+    sequential_chain = SequentialChain(chains=[character_summary_chain, action_chain], input_variables= ['character_name','race','class_type','alignment','general_information','appearance','personality','action_prompt'], output_variables=['character_summary', 'action'], verbose=True)
+
+
+    if action_prompt:
+        response = sequential_chain({'character_name':character_name,'race':race, 'class_type':class_type, 'alignment':alignment, 'general_information':general_information, 'appearance':appearance, 'personality':personality, 'action_prompt':action_prompt})
+        st.write(response['action'])
 
         with st.expander('Prompt Memory'):
             st.info(prompt_memory.buffer)
