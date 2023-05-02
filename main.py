@@ -16,9 +16,9 @@ def character_inputs():
     alignment_options = ['Lawful Good', 'Lawful Neutral', 'Lawful Evil', 'Neutral Good', 'True Neutral', 'Neutral Evil', 'Chaotic Good', 'Chaotic Neutral', 'Chaotic Evil']
 
     # Create the placeholders
-    general_information_placeholder = """You are a war cleric of the Queen of Cinders  You come from a barbarian tribe, wear heavy armor, and wield a warhammer. """
-    appearance_placeholder =  """You are tall and blond with a half shaven head with the shaven half covered in tribal tattoos. You have a long braided beard and a scar across your left eye. You wear heavy armor and wield a maul. Your armor is always lightly smoldering, and your cape always lightly blowing in the wind. You also have a large shield with tribal and holy symbols on it."""
-    personality_placeholder = """You usually find yourself fighting in the front-lines with the warriors, but your specialty is lightning and fire focused spells. Your name is "Obsidian Ash".  You despise healing magic and will only use it as a last resort to bring a ally back from the brink of dead. Your healing spells take on a unique style of healing that burns the wounds and often leaves a scar. Your magic is inspired by fire, storms, and nature. All spells should be described in a manner consistent with the spell name while including the flavor of fire, lava, and thunder. You often make reference to your goddess, often called "The Empress of Cinders" or "The Queen of Ash", but you realize that your allies do not worship her.  You speak with few words, but always with purpose and meaning, the only exception is when telling legends, which always take on a epic and dark tone. You have a very direct way of speaking, and you never use contractions. For example, "I'm" would always be "I am."""
+    general_information_placeholder = """You are a cleric of the Queen of Cinders. You come from a barbarian tribe, wear heavy armor, and wield a warhammer."""
+    appearance_placeholder =  """You are tall and blond with a half shaven head with the shaven half covered in tribal tattoos. You have a long braided beard and a scar across your left eye. You wear heavy armor and wield a warhammer. Your armor is always lightly smoldering, and your cape always lightly blowing in the wind. You also have a large shield with tribal and holy symbols on it."""
+    personality_placeholder = """You usually find yourself fighting in the front-lines with the warriors, but your specialty is lightning and fire focused spells. Your name is "Obsidian Ash", and you always change the story when asked how you earned your name.  You despise healing magic and will only use it as a last resort to bring a ally back from the brink of dead. Your healing spells take on a unique style of healing that burns the wounds and often leaves a scar. Your magic is inspired by fire, storms, and nature. All spells should be described in a manner consistent with the spell name while including the flavor of fire, lava, and thunder. You often make reference to your goddess, often called "The Empress of Cinders" or "The Queen of Ash", but you realize that your allies do not worship her.  You speak with few words, but always with purpose and meaning, the only exception is when telling legends, which always take on a epic and dark tone. You have a very direct way of speaking, and you never use contractions. For example, "I'm" would always be "I am."""
    
     # Create the inputs
     character_name = st.text_input("Character Name", "Obsidian Ash")
@@ -74,7 +74,7 @@ def script_generator():
     # Prompt Templates
     character_summary_template = PromptTemplate(
     input_variables = ['character_name','race','class_type','alignment','general_information','appearance','personality'],
-    template="""You are a fantasy writer and a famous fantasy novelists. Your job is to take the following traits and inputs given to you by a fan and write them an amazing and embellished 3-4 paragraph character summary. Their writing is bland and amatuer, but you are a professional. As such, your version will reuse as little words as possible while still staying true to the character. Write your version in the style of Brandon Sanderson:
+    template="""You are a fantasy writer and a famous fantasy novelists. Your job is to take the following traits and inputs given to you by a fan and write them an amazing and embellished 2 paragraph character summary. Their writing is bland and amatuer, but you are a professional. As such, your version will reuse as little words as possible while still staying true to the character. Write your version in the style of Brandon Sanderson:
                 Name: {character_name}
                 Race: {race}
                 Class: {class_type}
@@ -86,15 +86,15 @@ def script_generator():
 
     action_template = PromptTemplate(
     input_variables = ['action_prompt', 'character_summary'],
-    template="""You are a fantasy write and  a famous fantasy novelist. A fan has given you the following paragraphs as character in your book:
+    template="""You are a fantasy writer and  a famous fantasy novelist. A fan has given you the following paragraphs as character in your book:
                     {character_summary}
                     
-                    You must write an epic and heart stopping snippet in the style of Brandon Sanderson for your book based on the following prompt, {action_prompt}"""               )
+                    You must write an short and concise epic and heart stopping snippet in the style of Brandon Sanderson for your book based on the following prompt, {action_prompt}"""               )
     # Memory
     prompt_memory = ConversationBufferMemory(input_key='action_prompt', memory_key='chat_history')
 
     # LLMs Setup
-    llm = OpenAI(temperature=0.8, max_tokens= 2049)
+    llm = OpenAI(temperature=0.8, max_tokens= 2000)
     character_summary_chain = LLMChain( llm=llm,
                                         prompt=character_summary_template,
                                         verbose=True,
