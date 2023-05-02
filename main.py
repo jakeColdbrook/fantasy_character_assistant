@@ -12,36 +12,30 @@ os.environ['PINECONE_API_KEY'] = st.secrets['pinecone_api_key']
 def character_inputs():
     # Create the options
     race_options = ['Human', 'Elf', 'Dwarf', 'Half-elf', 'Half-orc', 'Halfling', 'Other']
-    class_options = ['Fighter', 'Wizard', 'Cleric', 'Ranger', 'Rogue', 'Monk', 'Warlock', 'Sorcerer', 'Bard', 'Barbarian']
-    alignment_options = ['Lawful Good', 'Lawful Neutral', 'Lawful Evil', 'Neutral Good', 'True Neutral', 'Neutral Evil', 'Chaotic Good', 'Chaotic Neutral', 'Chaotic Evil']
+    class_options = ['Fighter', 'Wizard', 'Cleric', 'Ranger', 'Rogue', 'Monk', 'Warlock', 'Sorcerer', 'Bard',
+                     'Barbarian']
+    alignment_options = ['Lawful Good', 'Lawful Neutral', 'Lawful Evil', 'Neutral Good', 'True Neutral', 'Neutral Evil',
+                         'Chaotic Good', 'Chaotic Neutral', 'Chaotic Evil']
 
     # Create the placeholders
     general_information_placeholder = """You are a cleric of the Queen of Cinders. You come from a barbarian tribe, wear heavy armor, and wield a warhammer."""
-    appearance_placeholder =  """You are tall and blond with a half shaven head with the shaven half covered in tribal tattoos. You have a long braided beard and a scar across your left eye. You wear heavy armor and wield a warhammer. Your armor is always lightly smoldering, and your cape always lightly blowing in the wind. You also have a large shield with tribal and holy symbols on it."""
+    appearance_placeholder = """You are tall and blond with a half shaven head with the shaven half covered in tribal tattoos. You have a long braided beard and a scar across your left eye. You wear heavy armor and wield a warhammer. Your armor is always lightly smoldering, and your cape always lightly blowing in the wind. You also have a large shield with tribal and holy symbols on it."""
     personality_placeholder = """You usually find yourself fighting in the front-lines with the warriors, but your specialty is lightning and fire focused spells. Your name is "Obsidian Ash", and you always change the story when asked how you earned your name.  You despise healing magic and will only use it as a last resort to bring a ally back from the brink of dead. Your healing spells take on a unique style of healing that burns the wounds and often leaves a scar. Your magic is inspired by fire, storms, and nature. All spells should be described in a manner consistent with the spell name while including the flavor of fire, lava, and thunder. You often make reference to your goddess, often called "The Empress of Cinders" or "The Queen of Ash", but you realize that your allies do not worship her.  You speak with few words, but always with purpose and meaning, the only exception is when telling legends, which always take on a epic and dark tone. You have a very direct way of speaking, and you never use contractions. For example, "I'm" would always be "I am."""
-   
+
     # Create the inputs
     character_name = st.text_input("Character Name", "Obsidian Ash")
     race = st.selectbox("Race", race_options, index=0)
     class_type = st.selectbox("Class", class_options, index=2)
     alignment = st.selectbox("Alignment", alignment_options, index=6)
     general_information = st.text_area("General Information", general_information_placeholder, height=200)
-    appearance = st.text_area("Appearance", value=appearance_placeholder ,height=200, )
+    appearance = st.text_area("Appearance", value=appearance_placeholder, height=200, )
     personality = st.text_area("Personality", value=personality_placeholder, height=400, )
 
-    # Save the inputs
-    if not character_name or not race or not class_type or not alignment or not general_information or not appearance or not personality:
-        # If any input is empty, replace with empty string
-        character_name = character_name or ""
-        race = race or ""
-        class_type = class_type or ""
-        alignment = alignment or ""
-        general_information = general_information or ""
-        appearance = appearance or ""
-        personality = personality or ""
-        st.warning("Please enter all inputs or this will break. I think even empty text should work.")
-    else:
-        # Save the inputs to separate variables
+    # Create the save button
+    save_button = st.button("Save Character Information")
+
+    # Save the inputs if the button is clicked
+    if save_button:
         st.session_state.character_name = character_name
         st.session_state.race = race
         st.session_state.class_type = class_type
@@ -49,8 +43,8 @@ def character_inputs():
         st.session_state.general_information = general_information
         st.session_state.appearance = appearance
         st.session_state.personality = personality
-        st.write("Character information updated. Go to the Roleplaying Assistant")
-
+        st.write("Character information saved.")
+    #TODO: Split sequential chain into two chains, one for character summary and one for action prompt. Run character summary when save button is clicked.
 # Create a function to display the outputs
 def script_generator():
     # Get the saved inputs
