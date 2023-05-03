@@ -8,8 +8,28 @@ from langchain.memory import ConversationBufferMemory
 os.environ['OPENAI_API_KEY'] = st.secrets['open_api_key']
 os.environ['PINECONE_API_KEY'] = st.secrets['pinecone_api_key']
 
-# Create a function to display the inputs
+
 def character_inputs():
+    # LLM Stuff
+    character_summary_template = PromptTemplate(
+        input_variables=['character_name', 'race', 'class_type', 'alignment', 'general_information', 'appearance',
+                         'personality'],
+        template="""You are a fantasy writer and a famous fantasy novelists. Your job is to take the following traits and inputs given to you by a fan and write them an amazing and embellished 2 paragraph character summary. Their writing is bland and amatuer, but you are a professional. As such, your version will reuse as little words as possible while still staying true to the character. Write your version in the style of Brandon Sanderson:
+                Name: {character_name}
+                Race: {race}
+                Class: {class_type}
+                Alignment: {alignment}
+                General Information: {general_information}
+                Appearance: {appearance}
+                Personality: {personality}
+                """)
+
+    llm = OpenAI(temperature=0.8, max_tokens=2000)
+    character_summary_chain = LLMChain(llm=llm,
+                                       prompt=character_summary_template,
+                                       verbose=True,
+                                       output_key='character_summary', )
+
     # Create the options
     race_options = ['Human', 'Elf', 'Dwarf', 'Half-elf', 'Half-orc', 'Halfling', 'Other']
     class_options = ['Fighter', 'Wizard', 'Cleric', 'Ranger', 'Rogue', 'Monk', 'Warlock', 'Sorcerer', 'Bard',
@@ -44,74 +64,56 @@ def character_inputs():
         st.session_state.appearance = appearance
         st.session_state.personality = personality
         st.write("Character information saved.")
-    #TODO: Split sequential chain into two chains, one for character summary and one for action prompt. Run character summary when save button is clicked.
+        character_summary = character_summary_chain.run(character_name=character_name, race=race, class_type=class_type,
+                                                        alignment=alignment,
+                                                        general_information=general_information, appearance=appearance,
+                                                        personality=personality)
+        st.write(character_summary)
+        st.session_state.character_summary = character_summary
+
+
 # Create a function to display the outputs
 def script_generator():
+    if st.session_state.character_summary ==None:
+        st.write('Please return to the character inputs page and click the "Save Character Information" button')
     # Get the saved inputs
     character_name = st.session_state.character_name
-    race = st.session_state.race
-    class_type = st.session_state.class_type
-    alignment = st.session_state.alignment
-    general_information = st.session_state.general_information
-    appearance = st.session_state.appearance
-    personality = st.session_state.personality
-
+    # race = st.session_state.race
+    # class_type = st.session_state.class_type
+    # alignment = st.session_state.alignment
+    # general_information = st.session_state.general_information
+    # appearance = st.session_state.appearance
+    # personality = st.session_state.personality
+    character_summary = st.session_state.character_summary
 
     # Display the outputs
     if character_name:
         st.write(f"{character_name}-GPT Roleplaying Assistant")
-        action_prompt = st.text_input('Enter a prompt', placeholder="You're surrounded by goblins. How do you break through them?")
+        action_prompt = st.text_input('Enter a prompt',
+                                      placeholder="You're surrounded by goblins. How do you break through them?")
     else:
         st.write("Please enter a character name.")
 
-
-    # Prompt Templates
-    character_summary_template = PromptTemplate(
-    input_variables = ['character_name','race','class_type','alignment','general_information','appearance','personality'],
-    template="""You are a fantasy writer and a famous fantasy novelists. Your job is to take the following traits and inputs given to you by a fan and write them an amazing and embellished 2 paragraph character summary. Their writing is bland and amatuer, but you are a professional. As such, your version will reuse as little words as possible while still staying true to the character. Write your version in the style of Brandon Sanderson:
-                Name: {character_name}
-                Race: {race}
-                Class: {class_type}
-                Alignment: {alignment}
-                General Information: {general_information}
-                Appearance: {appearance}
-                Personality: {personality}
-                """               )
-
     action_template = PromptTemplate(
-    input_variables = ['action_prompt', 'character_summary'],
-    template="""You are a fantasy writer and  a famous fantasy novelist. A fan has given you the following paragraphs as character in your book:
+        input_variables=['action_prompt', 'character_summary'],
+        template="""You are a fantasy writer and  a famous fantasy novelist. A fan has given you the following paragraphs as character in your book:
                     {character_summary}
                     
-                    You must write an short and concise epic and heart stopping snippet in the style of Brandon Sanderson for your book based on the following prompt, {action_prompt}"""               )
-    # Memory
-    prompt_memory = ConversationBufferMemory(input_key='action_prompt', memory_key='chat_history')
+                    You must write an short and concise epic and heart stopping snippet in the style of Brandon Sanderson for your book based on the following prompt, {action_prompt}""")
+    # Add memory for player actions
 
-    # LLMs Setup
-    llm = OpenAI(temperature=0.8, max_tokens= 2000)
-    character_summary_chain = LLMChain( llm=llm,
-                                        prompt=character_summary_template,
-                                        verbose=True,
-                                        output_key = 'character_summary',
-                                        memory=prompt_memory)
-
-    action_chain = LLMChain(            llm=llm,
-                                        prompt=action_template,
-                                        verbose=True,
-                                        output_key = 'action',
-                                        memory=prompt_memory)
-
-
-    sequential_chain = SequentialChain(chains=[character_summary_chain, action_chain], input_variables= ['character_name','race','class_type','alignment','general_information','appearance','personality','action_prompt'], output_variables=['character_summary', 'action'], verbose=True)
-
+    llm = OpenAI(temperature=0.8, max_tokens=2000)
+    action_chain = LLMChain(llm=llm,
+                            prompt=action_template,
+                            verbose=True,
+                            output_key='action', )
 
     if action_prompt:
-        response = sequential_chain({'character_name':character_name,'race':race, 'class_type':class_type, 'alignment':alignment, 'general_information':general_information, 'appearance':appearance, 'personality':personality, 'action_prompt':action_prompt})
-        st.write(response['action'])
+        response = action_chain.run(action_prompt=action_prompt, character_summary=character_summary)
+        st.write(response)
 
-        with st.expander('Prompt Memory'):
-            st.info(prompt_memory.buffer)
-
+if 'character_summary' not in st.session_state:
+    st.session_state.character_summary = None
 # Create the tabs
 tabs = ["Character Information", "Roleplaying Assistant"]
 selected_tab = st.sidebar.selectbox("Select a tab", tabs)
